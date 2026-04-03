@@ -6,12 +6,12 @@ import psycopg2
 app = Flask(__name__)
 CORS(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL") or "postgresql://booking_db_aq28_user:eylPp0YhB0ocaO8IGwj0v5ZzfbfwOWwm@dpg-d77v9uoule4c73dil1fg-a.oregon-postgres.render.com/booking_db_aq28"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
 
-# Create tables
+# Create Tables
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -38,7 +38,7 @@ def init_db():
 
 init_db()
 
-# GET Movies
+# Get Movies
 @app.route('/movies', methods=['GET'])
 def get_movies():
     conn = get_db()
@@ -48,51 +48,48 @@ def get_movies():
     cur.close()
     conn.close()
 
-    return jsonify([{"id":m[0],"title":m[1],"price":m[2]} for m in data])
+    return jsonify([
+        {"id": m[0], "title": m[1], "price": m[2]}
+        for m in data
+    ])
 
-# ADD Movie
+# Add Movie
 @app.route('/movies', methods=['POST'])
 def add_movie():
     data = request.json
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("INSERT INTO movies (title,price) VALUES (%s,%s)",
-                (data['title'], data['price']))
-    conn.commit()
+    cur.execute(
+        "INSERT INTO movies (title, price) VALUES (%s, %s)",
+        (data['title'], data['price'])
+    )
 
+    conn.commit()
     cur.close()
     conn.close()
-    return jsonify({"message":"Movie added"})
 
-# BOOK Ticket
+    return jsonify({"message": "Movie added"})
+
+# Book Ticket
 @app.route('/book', methods=['POST'])
-def book():
+def book_ticket():
     data = request.json
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("INSERT INTO bookings (movie_id,seats) VALUES (%s,%s)",
-                (data['movie_id'], data['seats']))
+    cur.execute(
+        "INSERT INTO bookings (movie_id, seats) VALUES (%s, %s)",
+        (data['movie_id'], data['seats'])
+    )
+
     conn.commit()
-
-    cur.close()
-    conn.close()
-    return jsonify({"message":"Booked successfully"})
-
-@app.route('/book/<int:id>', methods=['DELETE'])
-def delete_booking(id):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("DELETE FROM bookings WHERE id=%s", (id,))
-    conn.commit()
-
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Booking deleted"})
+    return jsonify({"message": "Booked successfully"})
 
+# Get Bookings
 @app.route('/bookings', methods=['GET'])
 def get_bookings():
     conn = get_db()
@@ -105,7 +102,6 @@ def get_bookings():
     """)
 
     data = cur.fetchall()
-
     cur.close()
     conn.close()
 
@@ -113,10 +109,25 @@ def get_bookings():
         {"id": b[0], "title": b[1], "seats": b[2]}
         for b in data
     ])
-@app.route("/")
-def h():
-    return "Hello World"
 
+# Delete Booking
+@app.route('/book/<int:id>', methods=['DELETE'])
+def delete_booking(id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM bookings WHERE id=%s", (id,))
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({"message": "Deleted successfully"})
+
+# Test Route
+@app.route("/")
+def home():
+    return "Backend Running"
 
 if __name__ == "__main__":
     app.run(debug=True)
