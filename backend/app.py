@@ -6,7 +6,7 @@ import psycopg2
 app = Flask(__name__)
 CORS(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL") or "postgresql://postgres:1234@localhost:5432/movie_db"
+DATABASE_URL = os.getenv("DATABASE_URL") or "postgresql://booking_db_aq28_user:eylPp0YhB0ocaO8IGwj0v5ZzfbfwOWwm@dpg-d77v9uoule4c73dil1fg-a.oregon-postgres.render.com/booking_db_aq28"
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
@@ -79,6 +79,10 @@ def book():
     cur.close()
     conn.close()
     return jsonify({"message":"Booked successfully"})
+@app.route("/")
+def h():
+    return "Hello World"
+
 
 if __name__ == "__main__":
     app.run(debug=True)

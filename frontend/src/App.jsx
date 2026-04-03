@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API = "http://127.0.0.1:5000"; // change after deployment
+const API = "https://booking-3yz8.onrender.com"; // change after deployment
 
 function App() {
   const [movies, setMovies] = useState([]);
