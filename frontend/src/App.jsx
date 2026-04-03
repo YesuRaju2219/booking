@@ -7,12 +7,30 @@ function App() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [seats, setSeats] = useState({});
+  const [bookings, setBookings] = useState([]);
 
   const fetchMovies = () => {
     fetch(`${API}/movies`)
       .then(res => res.json())
       .then(setMovies);
   };
+
+  const fetchBookings = () => {
+  fetch(`${API}/bookings`)
+    .then(res => res.json())
+    .then(setBookings);
+  };
+
+  const deleteBooking = (id) => {
+  fetch(`${API}/book/${id}`, {
+    method: "DELETE"
+  }).then(fetchBookings);
+ };
+
+  useEffect(() => {
+  fetchMovies();
+  fetchBookings();
+  }, []);
 
   useEffect(() => {
     fetchMovies();
@@ -48,6 +66,22 @@ function App() {
           onChange={e=>setPrice(e.target.value)} />
         <button className="btn btn-primary" onClick={addMovie}>Add Movie</button>
       </div>
+      <h3 className="mt-4">Booked Tickets</h3>
+
+     <ul className="list-group">
+       {bookings.map(b => (
+       <li className="list-group-item d-flex justify-content-between" key={b.id}>
+         {b.title} - Seats: {b.seats}
+
+      <button
+        className="btn btn-danger btn-sm"
+        onClick={() => deleteBooking(b.id)}
+      >
+        Remove
+      </button>
+       </li>
+           ))}
+      </ul>
 
       <div className="row">
         {movies.map(m=>(

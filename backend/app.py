@@ -79,6 +79,40 @@ def book():
     cur.close()
     conn.close()
     return jsonify({"message":"Booked successfully"})
+
+@app.route('/book/<int:id>', methods=['DELETE'])
+def delete_booking(id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM bookings WHERE id=%s", (id,))
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({"message": "Booking deleted"})
+
+@app.route('/bookings', methods=['GET'])
+def get_bookings():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT bookings.id, movies.title, bookings.seats
+    FROM bookings
+    JOIN movies ON bookings.movie_id = movies.id
+    """)
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {"id": b[0], "title": b[1], "seats": b[2]}
+        for b in data
+    ])
 @app.route("/")
 def h():
     return "Hello World"
