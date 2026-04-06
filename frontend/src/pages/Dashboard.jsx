@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "https://your-backend.onrender.com"; // 🔴 replace with your backend URL
+const API = "https://booking-3yz8.onrender.com/"; // 🔴 replace with your backend URL
 
 function Dashboard() {
   const [movies, setMovies] = useState([]);

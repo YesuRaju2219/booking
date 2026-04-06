@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-const API = "https://booking-3yz8.onrender.com";
+const API = "https://booking-3yz8.onrender.com/";
 
 function Register() {
   const [username, setUsername] = useState("");
