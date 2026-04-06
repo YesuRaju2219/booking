@@ -22,6 +22,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # USERS TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -31,6 +32,7 @@ def init_db():
     );
     """)
 
+    # MOVIES TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movies (
         id SERIAL PRIMARY KEY,
@@ -39,6 +41,7 @@ def init_db():
     );
     """)
 
+    # BOOKINGS TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS bookings (
         id SERIAL PRIMARY KEY,
@@ -46,6 +49,12 @@ def init_db():
         seats INT,
         user_id INT
     );
+    """)
+
+    # 🔥 IMPORTANT: Add column if not exists (fix your error)
+    cur.execute("""
+    ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS user_id INT;
     """)
 
     conn.commit()
@@ -99,6 +108,7 @@ def login():
 
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute("SELECT * FROM users WHERE username=%s", (data['username'],))
     user = cur.fetchone()
 
@@ -121,6 +131,7 @@ def login():
 def get_movies():
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute("SELECT * FROM movies")
     data = cur.fetchall()
 
@@ -132,6 +143,7 @@ def get_movies():
         for m in data
     ])
 
+# ADD MOVIE (ADMIN)
 @app.route('/movies', methods=['POST'])
 @token_required
 def add_movie(user):
@@ -142,6 +154,7 @@ def add_movie(user):
 
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute(
         "INSERT INTO movies (title, price) VALUES (%s,%s)",
         (data['title'], data['price'])
@@ -153,6 +166,7 @@ def add_movie(user):
 
     return jsonify({"message": "Movie added"})
 
+# DELETE MOVIE (ADMIN)
 @app.route('/movies/<int:id>', methods=['DELETE'])
 @token_required
 def delete_movie(user, id):
@@ -161,6 +175,7 @@ def delete_movie(user, id):
 
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute("DELETE FROM movies WHERE id=%s", (id,))
     conn.commit()
 
@@ -170,6 +185,7 @@ def delete_movie(user, id):
     return jsonify({"message": "Movie deleted"})
 
 # ---------------- BOOKINGS ----------------
+# BOOK TICKET
 @app.route('/book', methods=['POST'])
 @token_required
 def book(user):
@@ -177,6 +193,7 @@ def book(user):
 
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute(
         "INSERT INTO bookings (movie_id, seats, user_id) VALUES (%s,%s,%s)",
         (data['movie_id'], data['seats'], user['user_id'])
@@ -186,8 +203,9 @@ def book(user):
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Booked"})
+    return jsonify({"message": "Booked successfully"})
 
+# GET USER BOOKINGS ONLY
 @app.route('/bookings', methods=['GET'])
 @token_required
 def get_bookings(user):
@@ -211,6 +229,7 @@ def get_bookings(user):
         for b in data
     ])
 
+# DELETE BOOKING (USER ONLY)
 @app.route('/book/<int:id>', methods=['DELETE'])
 @token_required
 def delete_booking(user, id):
@@ -221,13 +240,14 @@ def delete_booking(user, id):
         "DELETE FROM bookings WHERE id=%s AND user_id=%s",
         (id, user['user_id'])
     )
-    conn.commit()
 
+    conn.commit()
     cur.close()
     conn.close()
 
     return jsonify({"message": "Deleted"})
 
+# TEST ROUTE
 @app.route("/")
 def home():
     return "Backend Running"
