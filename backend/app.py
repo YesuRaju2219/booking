@@ -1,20 +1,35 @@
 import os
+import psycopg2
+import jwt
+import datetime
+from functools import wraps
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import psycopg2
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 CORS(app)
+bcrypt = Bcrypt(app)
 
+SECRET_KEY = "secret123"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
 
-# Create Tables
+# ---------------- INIT DB ----------------
 def init_db():
     conn = get_db()
     cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT,
+        password TEXT,
+        role TEXT
+    );
+    """)
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movies (
@@ -38,13 +53,78 @@ def init_db():
 
 init_db()
 
-# Get Movies
+# ---------------- AUTH ----------------
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization")
+
+        if not token:
+            return jsonify({"error": "Token missing"}), 403
+
+        try:
+            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        except:
+            return jsonify({"error": "Invalid token"}), 403
+
+        return f(data, *args, **kwargs)
+
+    return decorated
+
+# ---------------- REGISTER ----------------
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+
+    hashed = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "INSERT INTO users (username, password, role) VALUES (%s,%s,%s)",
+        (data['username'], hashed, data['role'])
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"message": "User registered"})
+
+# ---------------- LOGIN ----------------
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM users WHERE username=%s", (data['username'],))
+    user = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if user and bcrypt.check_password_hash(user[2], data['password']):
+        token = jwt.encode({
+            "user_id": user[0],
+            "role": user[3],
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        }, SECRET_KEY, algorithm="HS256")
+
+        return jsonify({"token": token, "role": user[3]})
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
+# ---------------- MOVIES ----------------
 @app.route('/movies', methods=['GET'])
 def get_movies():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM movies")
     data = cur.fetchall()
+
     cur.close()
     conn.close()
 
@@ -53,15 +133,19 @@ def get_movies():
         for m in data
     ])
 
-# Add Movie
 @app.route('/movies', methods=['POST'])
-def add_movie():
+@token_required
+def add_movie(user):
+    if user['role'] != 'admin':
+        return jsonify({"error": "Access denied"}), 403
+
     data = request.json
+
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute(
-        "INSERT INTO movies (title, price) VALUES (%s, %s)",
+        "INSERT INTO movies (title, price) VALUES (%s,%s)",
         (data['title'], data['price'])
     )
 
@@ -71,15 +155,16 @@ def add_movie():
 
     return jsonify({"message": "Movie added"})
 
-# Book Ticket
+# ---------------- BOOKINGS ----------------
 @app.route('/book', methods=['POST'])
-def book_ticket():
+def book():
     data = request.json
+
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute(
-        "INSERT INTO bookings (movie_id, seats) VALUES (%s, %s)",
+        "INSERT INTO bookings (movie_id, seats) VALUES (%s,%s)",
         (data['movie_id'], data['seats'])
     )
 
@@ -89,7 +174,6 @@ def book_ticket():
 
     return jsonify({"message": "Booked successfully"})
 
-# Get Bookings
 @app.route('/bookings', methods=['GET'])
 def get_bookings():
     conn = get_db()
@@ -102,6 +186,7 @@ def get_bookings():
     """)
 
     data = cur.fetchall()
+
     cur.close()
     conn.close()
 
@@ -110,7 +195,6 @@ def get_bookings():
         for b in data
     ])
 
-# Delete Booking
 @app.route('/book/<int:id>', methods=['DELETE'])
 def delete_booking(id):
     conn = get_db()
@@ -122,9 +206,8 @@ def delete_booking(id):
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Deleted successfully"})
+    return jsonify({"message": "Deleted"})
 
-# Test Route
 @app.route("/")
 def home():
     return "Backend Running"
