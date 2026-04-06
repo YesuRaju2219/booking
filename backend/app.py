@@ -43,7 +43,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS bookings (
         id SERIAL PRIMARY KEY,
         movie_id INT,
-        seats INT
+        seats INT,
+        user_id INT
     );
     """)
 
@@ -75,7 +76,6 @@ def token_required(f):
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
-
     hashed = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
     conn = get_db()
@@ -99,7 +99,6 @@ def login():
 
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute("SELECT * FROM users WHERE username=%s", (data['username'],))
     user = cur.fetchone()
 
@@ -143,7 +142,6 @@ def add_movie(user):
 
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute(
         "INSERT INTO movies (title, price) VALUES (%s,%s)",
         (data['title'], data['price'])
@@ -155,27 +153,44 @@ def add_movie(user):
 
     return jsonify({"message": "Movie added"})
 
+@app.route('/movies/<int:id>', methods=['DELETE'])
+@token_required
+def delete_movie(user, id):
+    if user['role'] != 'admin':
+        return jsonify({"error": "Access denied"}), 403
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM movies WHERE id=%s", (id,))
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({"message": "Movie deleted"})
+
 # ---------------- BOOKINGS ----------------
 @app.route('/book', methods=['POST'])
-def book():
+@token_required
+def book(user):
     data = request.json
 
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute(
-        "INSERT INTO bookings (movie_id, seats) VALUES (%s,%s)",
-        (data['movie_id'], data['seats'])
+        "INSERT INTO bookings (movie_id, seats, user_id) VALUES (%s,%s,%s)",
+        (data['movie_id'], data['seats'], user['user_id'])
     )
 
     conn.commit()
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Booked successfully"})
+    return jsonify({"message": "Booked"})
 
 @app.route('/bookings', methods=['GET'])
-def get_bookings():
+@token_required
+def get_bookings(user):
     conn = get_db()
     cur = conn.cursor()
 
@@ -183,7 +198,8 @@ def get_bookings():
     SELECT bookings.id, movies.title, bookings.seats
     FROM bookings
     JOIN movies ON bookings.movie_id = movies.id
-    """)
+    WHERE bookings.user_id = %s
+    """, (user['user_id'],))
 
     data = cur.fetchall()
 
@@ -196,11 +212,15 @@ def get_bookings():
     ])
 
 @app.route('/book/<int:id>', methods=['DELETE'])
-def delete_booking(id):
+@token_required
+def delete_booking(user, id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("DELETE FROM bookings WHERE id=%s", (id,))
+    cur.execute(
+        "DELETE FROM bookings WHERE id=%s AND user_id=%s",
+        (id, user['user_id'])
+    )
     conn.commit()
 
     cur.close()
@@ -211,6 +231,3 @@ def delete_booking(id):
 @app.route("/")
 def home():
     return "Backend Running"
-
-if __name__ == "__main__":
-    app.run(debug=True)
