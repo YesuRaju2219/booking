@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "https://booking-3yz8.onrender.com/"; // 🔴 replace with your backend URL
+const API = "https://booking-3yz8.onrender.com"; // ✅ your backend URL (NO / at end)
 
 function Dashboard() {
   const [movies, setMovies] = useState([]);
@@ -10,12 +10,12 @@ function Dashboard() {
   const [price, setPrice] = useState("");
   const [selectedSeat, setSelectedSeat] = useState(null);
 
+  const navigate = useNavigate();
+
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
 
-  const navigate = useNavigate();
-
-  // ---------------- FETCH DATA ----------------
+  // ---------------- LOAD DATA ----------------
   useEffect(() => {
     if (!token) {
       navigate("/");
@@ -25,23 +25,44 @@ function Dashboard() {
     }
   }, []);
 
+  // ---------------- FETCH MOVIES ----------------
   const fetchMovies = () => {
     fetch(`${API}/movies`)
       .then(res => res.json())
-      .then(setMovies);
+      .then(setMovies)
+      .catch(err => console.error(err));
   };
 
+  // ---------------- FETCH BOOKINGS (FIXED) ----------------
   const fetchBookings = () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      console.log("No token found");
+      return;
+    }
+
     fetch(`${API}/bookings`, {
       headers: {
         "Authorization": token
       }
     })
-      .then(res => res.json())
-      .then(setBookings);
+      .then(res => {
+        if (!res.ok) {
+          throw new Error("Unauthorized");
+        }
+        return res.json();
+      })
+      .then(setBookings)
+      .catch(err => {
+        console.error(err);
+        alert("Session expired, please login again");
+        localStorage.clear();
+        navigate("/");
+      });
   };
 
-  // ---------------- ADD MOVIE (ADMIN) ----------------
+  // ---------------- ADD MOVIE ----------------
   const addMovie = () => {
     fetch(`${API}/movies`, {
       method: "POST",
@@ -57,7 +78,7 @@ function Dashboard() {
     });
   };
 
-  // ---------------- DELETE MOVIE (ADMIN) ----------------
+  // ---------------- DELETE MOVIE ----------------
   const deleteMovie = (id) => {
     if (!window.confirm("Delete this movie?")) return;
 
@@ -72,7 +93,7 @@ function Dashboard() {
   // ---------------- BOOK TICKET ----------------
   const book = (id) => {
     if (!selectedSeat) {
-      alert("Select a seat first");
+      alert("Select a seat");
       return;
     }
 
@@ -114,7 +135,7 @@ function Dashboard() {
   return (
     <div className="container mt-4">
 
-      {/* Header */}
+      {/* HEADER */}
       <div className="d-flex justify-content-between mb-3">
         <h2>🎬 Dashboard</h2>
         <button className="btn btn-danger" onClick={logout}>
@@ -122,7 +143,7 @@ function Dashboard() {
         </button>
       </div>
 
-      {/* Admin Panel */}
+      {/* ADMIN PANEL */}
       {role === "admin" && (
         <div className="card p-3 mb-4">
           <h4>Admin Panel</h4>
@@ -147,7 +168,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Movies */}
+      {/* MOVIES */}
       <h4>Movies</h4>
 
       <div className="row">
@@ -158,7 +179,7 @@ function Dashboard() {
               <h5>{m.title}</h5>
               <p>₹{m.price}</p>
 
-              {/* Seat Selection */}
+              {/* SEAT SELECTION */}
               <div className="mb-2">
                 {seats.map((s) => (
                   <button
@@ -171,7 +192,7 @@ function Dashboard() {
                 ))}
               </div>
 
-              {/* Book Button */}
+              {/* BOOK */}
               <button
                 className="btn btn-success"
                 onClick={() => book(m.id)}
@@ -179,7 +200,7 @@ function Dashboard() {
                 Book Ticket
               </button>
 
-              {/* Delete Movie (Admin Only) */}
+              {/* DELETE MOVIE (ADMIN) */}
               {role === "admin" && (
                 <button
                   className="btn btn-danger mt-2"
@@ -194,7 +215,7 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Bookings */}
+      {/* BOOKINGS */}
       <h4 className="mt-4">My Bookings</h4>
 
       <ul className="list-group">
