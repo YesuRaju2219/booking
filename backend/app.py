@@ -194,6 +194,17 @@ def book(user):
     conn = get_db()
     cur = conn.cursor()
 
+    # 🔥 check if seat already booked
+    cur.execute("""
+    SELECT * FROM bookings
+    WHERE movie_id=%s AND seats=%s
+    """, (data['movie_id'], data['seats']))
+
+    existing = cur.fetchone()
+
+    if existing:
+        return jsonify({"error": "Seat already booked"}), 400
+
     cur.execute(
         "INSERT INTO bookings (movie_id, seats, user_id) VALUES (%s,%s,%s)",
         (data['movie_id'], data['seats'], user['user_id'])
@@ -204,6 +215,22 @@ def book(user):
     conn.close()
 
     return jsonify({"message": "Booked successfully"})
+
+@app.route('/seats/<int:movie_id>', methods=['GET'])
+def get_seats(movie_id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT seats FROM bookings WHERE movie_id=%s
+    """, (movie_id,))
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([s[0] for s in data])
 
 # GET USER BOOKINGS ONLY
 @app.route('/bookings', methods=['GET'])
