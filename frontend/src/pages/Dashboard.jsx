@@ -13,6 +13,8 @@ function Dashboard() {
   const [search, setSearch] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [ratings, setRatings] = useState({});
+  const [loading, setLoading] = useState(true);
+
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
 
@@ -28,9 +30,13 @@ function Dashboard() {
   }, []);
 
   const fetchMovies = () => {
+    setLoading(true);
     fetch(`${API}/movies`)
       .then(res => res.json())
-      .then(setMovies);
+      .then(data => {
+        setMovies(data);
+        setLoading(false);
+      });
   };
 
   const fetchBookings = () => {
@@ -107,7 +113,7 @@ function Dashboard() {
     <div className={darkMode ? "dark" : "light"}>
 
       {/* NAVBAR */}
-      <div className="navbar">
+      <div className="navbar px-3">
         <h4>🎬 Movie Booking</h4>
 
         <div className="d-flex gap-2">
@@ -124,18 +130,18 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="container mt-5">
+      <div className="container py-5" style={{ maxWidth: "1200px" }}>
 
-        {/* ADMIN ADD MOVIE */}
+        {/* ADMIN */}
         {role === "admin" && (
           <div className="mb-4">
             <input
-              className="search-box mb-2"
+              className="form-control mb-2"
               placeholder="Movie name"
               onChange={(e) => setTitle(e.target.value)}
             />
             <input
-              className="search-box mb-2"
+              className="form-control mb-2"
               placeholder="Price"
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -147,68 +153,68 @@ function Dashboard() {
 
         {/* SEARCH */}
         <input
-          className="search-box"
+          className="form-control mb-4"
           placeholder="Search movies..."
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* MOVIES GRID */}
-        <div className="row">
-          {movies
-            .filter(m =>
-              m.title.toLowerCase().includes(search.toLowerCase())
-            )
-            .map(m => (
-              <div className="col-lg-4 col-md-6 mb-4" key={m.id}>
-                <div className="movie-card">
+        {/* LOADER */}
+        {loading ? (
+          <div className="loader"></div>
+        ) : (
+          <div className="row g-4">
+            {movies
+              .filter(m =>
+                m.title.toLowerCase().includes(search.toLowerCase())
+              )
+              .map(m => (
+                <div className="col-lg-4 col-md-6" key={m.id}>
+                  <div className="movie-card h-100">
 
-                  {/* TITLE + PRICE */}
-                  <h5 className="mb-2">{m.title}</h5>
-                  <p className="mb-2">₹{m.price}</p>
+                    <h5 className="mb-2">{m.title}</h5>
+                    <p className="mb-2">₹{m.price}</p>
 
-                  {/* RATING FIXED ALIGNMENT */}
-                  <div className="d-flex align-items-center gap-2 mb-2">
-                    <span>⭐ {ratings[m.id] || 0}</span>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      className="w-100"
-                      onChange={(e) =>
-                        setRatings({
-                          ...ratings,
-                          [m.id]: e.target.value
-                        })
-                      }
-                    />
-                  </div>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <span>⭐ {ratings[m.id] || 0}</span>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        className="w-100"
+                        onChange={(e) =>
+                          setRatings({
+                            ...ratings,
+                            [m.id]: e.target.value
+                          })
+                        }
+                      />
+                    </div>
 
-                  {/* BOOK BUTTON */}
-                  <button
-                    className="btn-book mt-2"
-                    onClick={() => {
-                      setSelectedMovie(m);
-                      fetchSeats(m.id);
-                    }}
-                  >
-                    Book Ticket
-                  </button>
-
-                  {/* ADMIN DELETE */}
-                  {role === "admin" && (
                     <button
-                      className="btn btn-danger mt-2 w-100"
-                      onClick={() => deleteMovie(m.id)}
+                      className="btn-book mt-auto"
+                      onClick={() => {
+                        setSelectedMovie(m);
+                        fetchSeats(m.id);
+                      }}
                     >
-                      Delete
+                      Book Ticket
                     </button>
-                  )}
-                </div>
-              </div>
-            ))}
-        </div>
 
-        {/* SEAT SECTION */}
+                    {role === "admin" && (
+                      <button
+                        className="btn btn-danger mt-2 w-100"
+                        onClick={() => deleteMovie(m.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* SEATS */}
         {selectedMovie && (
           <div className="mt-4">
             <h5>{selectedMovie.title}</h5>

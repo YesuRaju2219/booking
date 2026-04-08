@@ -76,3 +76,40 @@ body {
 .available { background: #e2e8f0; color:black; }
 .selected { background: #22c55e; }
 .booked { background: #ef4444; }
+/* LOADING SPINNER */
+.loader {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #6366f1;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 50px auto;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .movie-card {
+    padding: 15px;
+  }
+
+  .btn-book {
+    font-size: 13px;
+  }
+
+  .seat {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+}
