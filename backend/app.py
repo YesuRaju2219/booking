@@ -12,27 +12,25 @@ CORS(app)
 bcrypt = Bcrypt(app)
 
 SECRET_KEY = "secret123"
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or "your_postgresql_url_here"
 
+# ---------------- DATABASE ----------------
 def get_db():
     return psycopg2.connect(DATABASE_URL)
 
-# ---------------- INIT DB ----------------
 def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # USERS TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username TEXT,
+        username TEXT UNIQUE,
         password TEXT,
         role TEXT
     );
     """)
 
-    # MOVIES TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movies (
         id SERIAL PRIMARY KEY,
@@ -41,7 +39,6 @@ def init_db():
     );
     """)
 
-    # BOOKINGS TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS bookings (
         id SERIAL PRIMARY KEY,
@@ -49,12 +46,6 @@ def init_db():
         seats INT,
         user_id INT
     );
-    """)
-
-    # 🔥 IMPORTANT: Add column if not exists (fix your error)
-    cur.execute("""
-    ALTER TABLE bookings
-    ADD COLUMN IF NOT EXISTS user_id INT;
     """)
 
     conn.commit()
@@ -85,21 +76,36 @@ def token_required(f):
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
-    hashed = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+
+    username = data['username']
+    password = data['password']
+
+    hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    # 🔥 AUTO ADMIN LOGIC
+    if username == "admin" and password == "Veera":
+        role = "admin"
+    else:
+        role = "user"
 
     conn = get_db()
     cur = conn.cursor()
 
+    # prevent duplicate users
+    cur.execute("SELECT * FROM users WHERE username=%s", (username,))
+    if cur.fetchone():
+        return jsonify({"error": "User already exists"}), 400
+
     cur.execute(
         "INSERT INTO users (username, password, role) VALUES (%s,%s,%s)",
-        (data['username'], hashed, data['role'])
+        (username, hashed, role)
     )
 
     conn.commit()
     cur.close()
     conn.close()
 
-    return jsonify({"message": "User registered"})
+    return jsonify({"message": f"Registered as {role}"})
 
 # ---------------- LOGIN ----------------
 @app.route('/login', methods=['POST'])
@@ -116,13 +122,17 @@ def login():
     conn.close()
 
     if user and bcrypt.check_password_hash(user[2], data['password']):
+
         token = jwt.encode({
             "user_id": user[0],
             "role": user[3],
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }, SECRET_KEY, algorithm="HS256")
 
-        return jsonify({"token": token, "role": user[3]})
+        return jsonify({
+            "token": token,
+            "role": user[3]
+        })
 
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -143,7 +153,7 @@ def get_movies():
         for m in data
     ])
 
-# ADD MOVIE (ADMIN)
+# 🔒 ADMIN ONLY
 @app.route('/movies', methods=['POST'])
 @token_required
 def add_movie(user):
@@ -166,7 +176,7 @@ def add_movie(user):
 
     return jsonify({"message": "Movie added"})
 
-# DELETE MOVIE (ADMIN)
+# 🔒 ADMIN ONLY
 @app.route('/movies/<int:id>', methods=['DELETE'])
 @token_required
 def delete_movie(user, id):
@@ -185,7 +195,6 @@ def delete_movie(user, id):
     return jsonify({"message": "Movie deleted"})
 
 # ---------------- BOOKINGS ----------------
-# BOOK TICKET
 @app.route('/book', methods=['POST'])
 @token_required
 def book(user):
@@ -194,15 +203,12 @@ def book(user):
     conn = get_db()
     cur = conn.cursor()
 
-    # 🔥 check if seat already booked
+    # prevent duplicate seat
     cur.execute("""
-    SELECT * FROM bookings
-    WHERE movie_id=%s AND seats=%s
+    SELECT * FROM bookings WHERE movie_id=%s AND seats=%s
     """, (data['movie_id'], data['seats']))
 
-    existing = cur.fetchone()
-
-    if existing:
+    if cur.fetchone():
         return jsonify({"error": "Seat already booked"}), 400
 
     cur.execute(
@@ -216,23 +222,7 @@ def book(user):
 
     return jsonify({"message": "Booked successfully"})
 
-@app.route('/seats/<int:movie_id>', methods=['GET'])
-def get_seats(movie_id):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-    SELECT seats FROM bookings WHERE movie_id=%s
-    """, (movie_id,))
-
-    data = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return jsonify([s[0] for s in data])
-
-# GET USER BOOKINGS ONLY
+# 🔒 USER ONLY THEIR BOOKINGS
 @app.route('/bookings', methods=['GET'])
 @token_required
 def get_bookings(user):
@@ -243,7 +233,7 @@ def get_bookings(user):
     SELECT bookings.id, movies.title, bookings.seats
     FROM bookings
     JOIN movies ON bookings.movie_id = movies.id
-    WHERE bookings.user_id = %s
+    WHERE bookings.user_id=%s
     """, (user['user_id'],))
 
     data = cur.fetchall()
@@ -256,7 +246,6 @@ def get_bookings(user):
         for b in data
     ])
 
-# DELETE BOOKING (USER ONLY)
 @app.route('/book/<int:id>', methods=['DELETE'])
 @token_required
 def delete_booking(user, id):
@@ -272,9 +261,13 @@ def delete_booking(user, id):
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Deleted"})
+    return jsonify({"message": "Booking deleted"})
 
-# TEST ROUTE
+# ---------------- ROOT ----------------
 @app.route("/")
 def home():
-    return "Backend Running"
+    return "Backend running..."
+
+# ---------------- RUN ----------------
+if __name__ == "__main__":
+    app.run(debug=True)
