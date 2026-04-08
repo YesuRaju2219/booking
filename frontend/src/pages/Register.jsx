@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const API = "https://booking-3yz8.onrender.com/";
+const API = "https://booking-3yz8.onrender.com";
 
 function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
 
   const navigate = useNavigate();
 
@@ -14,16 +13,18 @@ function Register() {
     fetch(`${API}/register`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ username, password, role })
-    }).then(() => {
-      alert("Registered!");
+      body: JSON.stringify({ username, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
       navigate("/");
     });
   };
 
   return (
     <div className="container mt-5">
-      <div className="card p-4 mx-auto" style={{maxWidth: "400px"}}>
+      <div className="card p-4 mx-auto" style={{maxWidth:"400px"}}>
         <h3 className="text-center">Register</h3>
 
         <input className="form-control mb-2"
@@ -34,19 +35,9 @@ function Register() {
           placeholder="Password"
           onChange={e=>setPassword(e.target.value)} />
 
-        <select className="form-control mb-2"
-          onChange={e=>setRole(e.target.value)}>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        <button className="btn btn-success w-100" onClick={register}>
+        <button className="btn btn-primary w-100" onClick={register}>
           Register
         </button>
-
-        <p className="mt-2 text-center">
-          Already have account? <Link to="/">Login</Link>
-        </p>
       </div>
     </div>
   );
