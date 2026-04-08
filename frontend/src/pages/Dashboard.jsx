@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles.css";
+import toast from "react-hot-toast";
 
 const API = "https://booking-3yz8.onrender.com";
 
@@ -10,6 +10,9 @@ function Dashboard() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [bookedSeats, setBookedSeats] = useState([]);
   const [selectedSeat, setSelectedSeat] = useState(null);
+  const [search, setSearch] = useState("");
+  const [darkMode, setDarkMode] = useState(true);
+  const [ratings, setRatings] = useState({});
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
 
@@ -63,6 +66,11 @@ function Dashboard() {
   };
 
   const bookSeat = () => {
+    if (!selectedSeat) {
+      toast.error("Select a seat first");
+      return;
+    }
+
     fetch(`${API}/book`, {
       method: "POST",
       headers: {
@@ -76,7 +84,7 @@ function Dashboard() {
     })
       .then(res => res.json())
       .then(() => {
-        alert("Booking Successful 🎉");
+        toast.success(`Seat ${selectedSeat} booked 🎉`);
         fetchSeats(selectedMovie.id);
         fetchBookings();
       });
@@ -90,76 +98,108 @@ function Dashboard() {
   const seats = Array.from({ length: 30 }, (_, i) => i + 1);
 
   return (
-    <div>
+    <div className={darkMode ? "dark" : "light"}>
 
       {/* NAVBAR */}
-      <nav className="navbar p-3">
-        <div className="container d-flex justify-content-between">
-          <h4 className="navbar-brand">🎬 BookMyShow Clone</h4>
-          <button className="btn btn-danger" onClick={logout}>Logout</button>
+      <div className="navbar">
+        <h4>🎬 Movie Booking</h4>
+
+        <div>
+          <button onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+
+          <button className="btn btn-danger ms-2" onClick={logout}>
+            Logout
+          </button>
         </div>
-      </nav>
+      </div>
 
       <div className="container mt-4">
 
-        {/* ADMIN PANEL */}
+        {/* ADMIN */}
         {role === "admin" && (
-          <div className="card p-3 mb-4">
-            <h5>Add Movie</h5>
-            <input className="form-control mb-2"
-              placeholder="Movie Name"
-              onChange={e => setTitle(e.target.value)} />
-
-            <input className="form-control mb-2"
+          <div className="mb-4">
+            <input
+              className="search-box"
+              placeholder="Movie name"
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <input
+              className="search-box"
               placeholder="Price"
-              onChange={e => setPrice(e.target.value)} />
-
+              onChange={(e) => setPrice(e.target.value)}
+            />
             <button className="btn btn-primary" onClick={addMovie}>
               Add Movie
             </button>
           </div>
         )}
 
+        {/* SEARCH */}
+        <input
+          className="search-box"
+          placeholder="Search movies..."
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
         {/* MOVIES */}
-        <h4 className="mb-3">Now Showing</h4>
-
         <div className="row">
-          {movies.map(m => (
-            <div className="col-md-4 mb-4" key={m.id}>
-              <div className="card p-3 shadow-sm">
+          {movies
+            .filter(m =>
+              m.title.toLowerCase().includes(search.toLowerCase())
+            )
+            .map(m => (
+              <div className="col-md-3 mb-4" key={m.id}>
+                <div className="movie-card">
 
-                <h5>{m.title}</h5>
-                <p className="text-muted">₹{m.price}</p>
+                  <h5>{m.title}</h5>
+                  <p>₹{m.price}</p>
 
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setSelectedMovie(m);
-                    fetchSeats(m.id);
-                  }}
-                >
-                  Book Tickets
-                </button>
+                  {/* RATING */}
+                  ⭐ {ratings[m.id] || 0}
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    onChange={(e) =>
+                      setRatings({ ...ratings, [m.id]: e.target.value })
+                    }
+                  />
 
-                {role === "admin" && (
                   <button
-                    className="btn btn-danger mt-2"
-                    onClick={() => deleteMovie(m.id)}
+                    className="btn-book mt-2"
+                    onClick={() => {
+                      setSelectedMovie(m);
+                      fetchSeats(m.id);
+                    }}
                   >
-                    Delete
+                    Book Ticket
                   </button>
-                )}
+
+                  {role === "admin" && (
+                    <button
+                      className="btn btn-danger mt-2 w-100"
+                      onClick={() => deleteMovie(m.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
 
-        {/* SEAT UI */}
+        {/* SEATS */}
         {selectedMovie && (
-          <div className="card p-4 mt-4">
-            <h5>{selectedMovie.title} - Select Seat</h5>
+          <div>
+            <h5>{selectedMovie.title}</h5>
 
-            <div className="d-flex flex-wrap mt-3">
+            <div>
+              ⬜ Available | 🟩 Selected | 🟥 Booked
+            </div>
+
+            <div className="d-flex flex-wrap">
               {seats.map(s => {
                 const isBooked = bookedSeats.includes(s);
 
@@ -191,13 +231,12 @@ function Dashboard() {
         {/* BOOKINGS */}
         <h4 className="mt-5">My Bookings</h4>
 
-        <ul className="list-group">
-          {bookings.map(b => (
-            <li className="list-group-item d-flex justify-content-between" key={b.id}>
-              {b.title} - Seat {b.seats}
-            </li>
-          ))}
-        </ul>
+        {bookings.map(b => (
+          <div className="booking-card" key={b.id}>
+            <span>{b.title}</span>
+            <span>Seat {b.seats}</span>
+          </div>
+        ))}
 
       </div>
     </div>

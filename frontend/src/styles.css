@@ -1,61 +1,77 @@
 body {
-  background: #f5f7fb;
   font-family: "Poppins", sans-serif;
+  margin: 0;
 }
 
-/* Navbar */
+/* THEMES */
+.dark {
+  background: #0f172a;
+  color: white;
+  min-height: 100vh;
+}
+
+.light {
+  background: #f1f5f9;
+  color: black;
+  min-height: 100vh;
+}
+
+/* NAVBAR */
 .navbar {
-  background: #111827;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
 }
 
-.navbar-brand {
-  color: #fff;
-  font-weight: bold;
-}
-
-/* Cards */
-.card {
-  border-radius: 12px;
-  border: none;
+/* CARD */
+.movie-card {
+  border-radius: 16px;
+  padding: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
   transition: 0.3s;
 }
 
-.card:hover {
-  transform: translateY(-5px);
+.movie-card:hover {
+  transform: scale(1.03);
 }
 
-/* Buttons */
-.btn-primary {
-  background: #6366f1;
+/* BUTTON */
+.btn-book {
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border: none;
+  padding: 10px;
+  color: white;
 }
 
-.btn-success {
-  background: #22c55e;
+/* SEARCH */
+.search-box {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 20px;
 }
 
-.btn-danger {
-  background: #ef4444;
+/* BOOKING */
+.booking-card {
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
 }
 
-/* Seat UI */
+/* SEATS */
 .seat {
   width: 40px;
   height: 40px;
   margin: 5px;
   border-radius: 8px;
-  border: none;
 }
 
-.seat.available {
-  background: #e5e7eb;
-}
-
-.seat.selected {
-  background: #22c55e;
-}
-
-.seat.booked {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
+.available { background: #e2e8f0; color:black; }
+.selected { background: #22c55e; }
+.booked { background: #ef4444; }
