@@ -55,14 +55,20 @@ function Dashboard() {
         Authorization: token
       },
       body: JSON.stringify({ title, price })
-    }).then(fetchMovies);
+    }).then(() => {
+      toast.success("Movie added 🎬");
+      fetchMovies();
+    });
   };
 
   const deleteMovie = (id) => {
     fetch(`${API}/movies/${id}`, {
       method: "DELETE",
       headers: { Authorization: token }
-    }).then(fetchMovies);
+    }).then(() => {
+      toast.success("Movie deleted ❌");
+      fetchMovies();
+    });
   };
 
   const bookSeat = () => {
@@ -104,29 +110,32 @@ function Dashboard() {
       <div className="navbar">
         <h4>🎬 Movie Booking</h4>
 
-        <div>
-          <button onClick={() => setDarkMode(!darkMode)}>
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-light"
+            onClick={() => setDarkMode(!darkMode)}
+          >
             {darkMode ? "☀️" : "🌙"}
           </button>
 
-          <button className="btn btn-danger ms-2" onClick={logout}>
+          <button className="btn btn-danger" onClick={logout}>
             Logout
           </button>
         </div>
       </div>
 
-      <div className="container mt-4">
+      <div className="container mt-5">
 
-        {/* ADMIN */}
+        {/* ADMIN ADD MOVIE */}
         {role === "admin" && (
           <div className="mb-4">
             <input
-              className="search-box"
+              className="search-box mb-2"
               placeholder="Movie name"
               onChange={(e) => setTitle(e.target.value)}
             />
             <input
-              className="search-box"
+              className="search-box mb-2"
               placeholder="Price"
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -143,30 +152,38 @@ function Dashboard() {
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* MOVIES */}
+        {/* MOVIES GRID */}
         <div className="row">
           {movies
             .filter(m =>
               m.title.toLowerCase().includes(search.toLowerCase())
             )
             .map(m => (
-              <div className="col-md-3 mb-4" key={m.id}>
+              <div className="col-lg-4 col-md-6 mb-4" key={m.id}>
                 <div className="movie-card">
 
-                  <h5>{m.title}</h5>
-                  <p>₹{m.price}</p>
+                  {/* TITLE + PRICE */}
+                  <h5 className="mb-2">{m.title}</h5>
+                  <p className="mb-2">₹{m.price}</p>
 
-                  {/* RATING */}
-                  ⭐ {ratings[m.id] || 0}
-                  <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    onChange={(e) =>
-                      setRatings({ ...ratings, [m.id]: e.target.value })
-                    }
-                  />
+                  {/* RATING FIXED ALIGNMENT */}
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <span>⭐ {ratings[m.id] || 0}</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      className="w-100"
+                      onChange={(e) =>
+                        setRatings({
+                          ...ratings,
+                          [m.id]: e.target.value
+                        })
+                      }
+                    />
+                  </div>
 
+                  {/* BOOK BUTTON */}
                   <button
                     className="btn-book mt-2"
                     onClick={() => {
@@ -177,6 +194,7 @@ function Dashboard() {
                     Book Ticket
                   </button>
 
+                  {/* ADMIN DELETE */}
                   {role === "admin" && (
                     <button
                       className="btn btn-danger mt-2 w-100"
@@ -190,12 +208,12 @@ function Dashboard() {
             ))}
         </div>
 
-        {/* SEATS */}
+        {/* SEAT SECTION */}
         {selectedMovie && (
-          <div>
+          <div className="mt-4">
             <h5>{selectedMovie.title}</h5>
 
-            <div>
+            <div className="mb-2">
               ⬜ Available | 🟩 Selected | 🟥 Booked
             </div>
 
@@ -229,7 +247,7 @@ function Dashboard() {
         )}
 
         {/* BOOKINGS */}
-        <h4 className="mt-5">My Bookings</h4>
+        <h4 className="mt-5">🎟️ My Bookings</h4>
 
         {bookings.map(b => (
           <div className="booking-card" key={b.id}>
