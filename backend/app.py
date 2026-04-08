@@ -82,7 +82,7 @@ def register():
 
     hashed = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    # 🔥 AUTO ADMIN LOGIC
+    # 🔥 AUTO ADMIN
     if username == "admin" and password == "Veera":
         role = "admin"
     else:
@@ -91,7 +91,6 @@ def register():
     conn = get_db()
     cur = conn.cursor()
 
-    # prevent duplicate users
     cur.execute("SELECT * FROM users WHERE username=%s", (username,))
     if cur.fetchone():
         return jsonify({"error": "User already exists"}), 400
@@ -203,7 +202,7 @@ def book(user):
     conn = get_db()
     cur = conn.cursor()
 
-    # prevent duplicate seat
+    # ❌ prevent duplicate seat booking
     cur.execute("""
     SELECT * FROM bookings WHERE movie_id=%s AND seats=%s
     """, (data['movie_id'], data['seats']))
@@ -222,7 +221,24 @@ def book(user):
 
     return jsonify({"message": "Booked successfully"})
 
-# 🔒 USER ONLY THEIR BOOKINGS
+# 🔥 NEW: GET BOOKED SEATS (FIX FOR YOUR ERROR)
+@app.route('/seats/<int:movie_id>', methods=['GET'])
+def get_seats(movie_id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT seats FROM bookings WHERE movie_id=%s
+    """, (movie_id,))
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([s[0] for s in data])
+
+# 🔒 USER BOOKINGS ONLY
 @app.route('/bookings', methods=['GET'])
 @token_required
 def get_bookings(user):
@@ -268,6 +284,5 @@ def delete_booking(user, id):
 def home():
     return "Backend running..."
 
-# ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=True)
